@@ -1,0 +1,45 @@
+function DomainController {
+
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '')]
+    [OutputType('PowerView.Computer')]
+    [OutputType('System.DirectoryServices.ActiveDirectory.DomainController')]
+    [CmdletBinding()]
+    Param(
+        [Parameter(Position = 0, ValueFromPipeline = $True)]
+        [String]
+        $Domain,
+
+        [ValidateNotNullOrEmpty()]
+        [Alias('DomainController')]
+        [String]
+        $Server,
+
+        [Switch]
+        $LDAP,
+
+        [Management.Automation.PSCredential]
+        [Management.Automation.CredentialAttribute()]
+        $Credential = [Management.Automation.PSCredential]::Empty
+    )
+
+    PROCESS {
+        $Arguments = @{}
+        if ($PSBoundParameters['Domain']) { $Arguments['Domain'] = $Domain }
+        if ($PSBoundParameters['Credential']) { $Arguments['Credential'] = $Credential }
+
+        if ($PSBoundParameters['LDAP'] -or $PSBoundParameters['Server']) {
+            if ($PSBoundParameters['Server']) { $Arguments['Server'] = $Server }
+
+            # UAC specification for domain controllers
+            $Arguments['LDAPFilter'] = '(userAccountControl:1.2.840.113556.1.4.803:=8192)'
+
+            Get-DomainComputer @Arguments
+        }
+        else {
+            $FoundDomain = Get-Domain @Arguments
+            if ($FoundDomain) {
+                $FoundDomain.DomainControllers
+            }
+        }
+    }
+}
